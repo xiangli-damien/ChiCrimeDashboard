@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Chicago Crime Dashboard</title>
+    <link rel="stylesheet" type="text/css" href="/css/style.css"/>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" crossorigin=""/>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+<div class="container">
+
+    <!-- Recent Crimes Warning Section -->
+    <div class="alert-banner">
+        <h2>Latest Crimes</h2>
+        {{#latestCrimes}}
+            <p><strong>{{type}}</strong> occurred at latitude {{latitude}}, longitude {{longitude}} on {{date}} {{hour}}:00.</p>
+        {{/latestCrimes}}
+    </div>
+
+    <!-- Map Section -->
+    <div id="map" style="height: 400px; margin-bottom: 20px;"></div>
+
+    <!-- Dashboard Data -->
+    <h1>Chicago Crime Dashboard</h1>
+    <p><strong>Year-Month:</strong> {{yearmonth}}</p>
+    <p><strong>Arrest:</strong> {{arrest}}</p>
+    <p><strong>Domestic Violence:</strong> {{domestic}}</p>
+    <table class="small-table">
+        <thead>
+        <tr>
+            <th>District</th>
+            <th>Crime Count</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{#districts}}
+            <tr>
+                <td>{{district}}</td>
+                <td>{{count}}</td>
+            </tr>
+        {{/districts}}
+        </tbody>
+    </table>
+    <div id="chart-container">
+        <h2>Crime Count by District (Ranked)</h2>
+        <svg id="bar_chart" width="600" height="400"></svg>
+    </div>
+
+</div>
+<script>
+    // Load latest crimes data
+    const latestCrimes = {{{latestCrimesJson}}};
+    const map = L.map('map').setView([41.85, -87.65], 10); // Default center at Chicago
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    latestCrimes.forEach(crime => {
+        if (crime.latitude && crime.longitude) {
+            L.marker([crime.latitude, crime.longitude])
+                    .addTo(map)
+                    .bindPopup(`<strong>${crime.type}</strong><br>${crime.date} ${crime.hour}:00`);
+        }
+    });
+
+    // Render bar chart for districts
+    const data = {{{jsonData}}};
+    const svg = d3.select("#bar_chart");
+    svg.selectAll("*").remove();
+
+    const margin = { top: 40, right: 40, bottom: 60, left: 60 };
+    const width = +svg.attr("width") - margin.left - margin.right;
+    const height = +svg.attr("height") - margin.top - margin.bottom;
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const x = d3.scaleBand()
+            .domain(data.map(d => d.district))
+            .range([0, width])
+            .padding(0.1);
+
+    const y = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.count) || 1])
+            .range([height, 0]);
+
+    g.append("g")
+            .attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(x));
+
+    g.append("g").call(d3.axisLeft(y));
+
+    g.selectAll(".bar")
+            .data(data)
+            .enter()
+            .append("rect")
+            .attr("class", "bar")
+            .attr("x", d => x(d.district))
+            .attr("y", d => y(d.count))
+            .attr("width", x.bandwidth())
+            .attr("height", d => height - y(d.count))
+            .attr("fill", "steelblue");
+
+    g.append("text")
+            .attr("x", width / 2)
+            .attr("y", -10)
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .text(`Crimes by District (Ranked)`);
+</script>
+</body>
+</html>

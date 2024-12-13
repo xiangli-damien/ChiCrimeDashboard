@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Query Chicago Crime</title>
+    <link rel="stylesheet" type="text/css" href="/css/style.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" crossorigin=""></script>
+</head>
+<body>
+<div class="container">
+    <div class="alert-banner">
+        <h2>Latest Crimes</h2>
+        {{#latestCrimes}}
+            <p><strong>{{type}}</strong> occurred at ({{latitude}}, {{longitude}}) on {{date}}.</p>
+        {{/latestCrimes}}
+    </div>
+    <div id="map" style="height: 400px; margin-bottom: 20px;"></div>
+    <h1>Query Monthly Crime Data</h1>
+    <form action="/query" method="post" class="input-form">
+        <div class="form-group">
+            <label>Year-Month (YYYYMM):</label>
+            <input type="text" name="yearmonth" value="202312" required>
+        </div>
+        <div class="form-group">
+            <label>Arrest (Yes/No/Both):</label>
+            <input type="text" name="arrest" value="both" required>
+        </div>
+        <div class="form-group">
+            <label>Domestic Violence (Yes/No/Both):</label>
+            <input type="text" name="domestic" value="both" required>
+        </div>
+        <button type="submit" class="submit-btn">Submit Query</button>
+    </form>
+</div>
+<script>
+    const latestCrimes = {{{latestCrimesJson}}};
+    const map = L.map('map').setView([41.85, -87.65], 10);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    latestCrimes.forEach(crime => {
+        if (crime.latitude && crime.longitude) {
+            L.marker([crime.latitude, crime.longitude]).addTo(map)
+                    .bindPopup(`<strong>${crime.type}</strong><br>${crime.date}`);
+        }
+    });
+</script>
+</body>
+</html>
